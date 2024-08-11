@@ -1,32 +1,68 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
+mod framebuffer;
+mod maze;
 
-/// Función para cargar un laberinto desde un archivo y almacenarlo en un array de dos dimensiones
-pub fn load_maze(filename: &str) -> Vec<Vec<char>> {
-    let file = File::open(filename).expect("No se pudo abrir el archivo.");
-    let reader = BufReader::new(file);
+use framebuffer::Framebuffer;
+use maze::load_maze;
+use minifb::{Key, Window, WindowOptions};
 
-    reader
-        .lines()
-        .map(|line| line.expect("Error al leer la línea").chars().collect())
-        .collect()
+fn draw_cell(framebuffer: &mut Framebuffer, x0: usize, y0: usize, block_size: usize, cell: char) {
+    match cell {
+        '+' | '-' => framebuffer.set_current_color(0x333355), // Color de las paredes
+        'p' => framebuffer.set_current_color(0x00FF00),        // Color del punto de inicio
+        'g' => framebuffer.set_current_color(0xFF0000),        // Color del objetivo
+        ' ' => framebuffer.set_current_color(0xFFDAB9),        // Color del espacio vacío
+        _ => framebuffer.set_current_color(0x000000),          // Color por defecto (negro)
+    }
+
+    // Dibuja un rectángulo en la posición (x0, y0) con tamaño block_size
+    for y in y0..y0 + block_size {
+        for x in x0..x0 + block_size {
+            framebuffer.point(x as isize, y as isize);
+        }
+    }
 }
 
+fn render(framebuffer: &mut Framebuffer) {
+    let maze = load_maze("./maze.txt");
+    let block_size = 100; // Tamaño del bloque aumentado
 
-/// Función para imprimir el laberinto en la consola
-pub fn print_maze(maze: &Vec<Vec<char>>) {
-    for row in maze {
-        for &cell in row {
-            print!("{}", cell);
+    for row in 0..maze.len() {
+        for col in 0..maze[row].len() {
+            draw_cell(
+                framebuffer,
+                col * block_size,
+                row * block_size,
+                block_size,
+                maze[row][col],
+            );
         }
-        println!();
     }
 }
 
 fn main() {
-    // Cargar el laberinto desde un archivo
-    let maze = load_maze("C:/Users/50250/Desktop/Sofía Mishell Velásquez UVG/Tercer Año 2024/Segundo Semestre/Graficas/-Raycasting/maze.txt");
+    let maze = load_maze("./maze.txt");
+    let block_size = 100; // Tamaño del bloque aumentado
 
-    // Imprimir el laberinto
-    print_maze(&maze);
+    let window_width = maze[0].len() * block_size;  // Basado en el tamaño del laberinto
+    let window_height = maze.len() * block_size;    // Basado en el tamaño del laberinto
+
+    let mut framebuffer = Framebuffer::new(window_width, window_height);
+
+    let mut window = Window::new(
+        "Maze Example",
+        window_width,
+        window_height,
+        WindowOptions::default(),
+    )
+    .unwrap();
+
+    while window.is_open() && !window.is_key_down(Key::Escape) {
+        // Render the maze to the framebuffer
+        render(&mut framebuffer);
+
+        // Update the window with the framebuffer contents
+        window
+            .update_with_buffer(&framebuffer.buffer(), window_width, window_height)
+            .unwrap();
+    }
 }
