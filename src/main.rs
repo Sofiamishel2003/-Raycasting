@@ -342,18 +342,21 @@ fn main() {
         }
     
         render_minimap(&mut framebuffer, &player, &maze, minimap_x, minimap_y, minimap_scale);
-    
-        // Verificar si el screamer debe activarse cada 5 segundos
-        if last_screamer_time.elapsed().as_secs() >= 10 {
+        
+        // Verificar si el screamer debe activarse cada 10 segundos
+        if last_screamer_time.elapsed().as_secs() >= 11 && !screamer_triggered {
             screamer_triggered = true;
             last_screamer_time = Instant::now(); // Resetear el temporizador
-            play_screamer_sound(); // Reproducir sonido del screamer
         }
 
         // Dibujar el screamer si se activó
         if screamer_triggered {
+            if screamer_scale == 0.1 {
+                play_screamer_sound(); // Reproducir sonido del screamer al mismo tiempo que la imagen aparece
+            }
+            
             draw_image(&mut framebuffer, &SCREAMER_IMAGE, 300, 200, screamer_scale);
-            screamer_scale += 0.05; // Aumentar el tamaño del screamer para la animación
+            screamer_scale += 0.10; // Aumentar el tamaño del screamer para la animación
             if screamer_scale >= 1.5 {
                 screamer_triggered = false; // Ocultar el screamer después de un tiempo
                 screamer_scale = 0.1; // Reiniciar el tamaño del screamer
