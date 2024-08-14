@@ -178,12 +178,18 @@ fn main() {
     while window.is_open() {
         if window.is_key_down(Key::Key1) {
             selected_maze = "./mazes/maze1.txt".to_string();
+            stop_music(); // Detener la música del menú
+            play_background_music("src/assets/music/Club_classics.mp3");        
             break;
         } else if window.is_key_down(Key::Key2) {
             selected_maze = "./mazes/maze2.txt".to_string();
+            stop_music(); // Detener la música del menú
+            play_background_music("src/assets/music/360.mp3");        
             break;
         } else if window.is_key_down(Key::Key3) {
             selected_maze = "./mazes/maze3.txt".to_string();
+            stop_music(); // Detener la música del menú
+            play_background_music("src/assets/music/Girl_so_confusing.mp3");        
             break;
         }
 
@@ -198,10 +204,6 @@ fn main() {
 
     // Cargar laberinto seleccionado
     let maze = load_maze(&selected_maze);
-
-    // Ahora que se seleccionó el laberinto, cambiar la música
-    stop_music(); // Detener la música del menú
-    play_background_music("src/assets/music/Background_Music.mp3");
 
     let mut player = Player {
         pos: Vec2::new(150.0, 150.0),
