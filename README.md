@@ -14,3 +14,9 @@ Brat Summer Videogame, made in RUST, the maze its almost so confusing as being a
 
 
 ## Total: 110 + 30 subjetivos
+## Brat Maze Level 1
+https://github.com/user-attachments/assets/2ef0be93-c0bb-48c6-a0a6-512206ba56b8
+
+## Brat Maze Level 3
+https://github.com/user-attachments/assets/f9b42b93-c30c-40e8-afef-1e4cbdbad8c8
+
