@@ -9,5 +9,8 @@ Brat Summer Videogame, made in RUST, the maze its almost so confusing as being a
 - (10 puntos) Por agregar efectos de sonido (se agrego musica dependiendo del mapa seleccionado).
 - (15  puntos) Por agregar una pantalla de bienvenida y se puede seleccionar multiples niveles.
 - (10 puntos) Por agregar una pantalla de éxito cuando se cumpla una condición en el nivel
+- (20 puntos) Por agregar sprites utilizando billboarding a algún lugar de la pantalla
+- (30 puntos) Por agregar al menos 1 animación a alguna sprite en la pantalla
 
-## Total: 60
+
+## Total: 110 + 30 subjetivos
