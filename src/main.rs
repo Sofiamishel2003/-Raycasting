@@ -10,7 +10,7 @@ use player::{Player, process_events};
 use std::{time::{Duration, Instant}};
 use framebuffer::Framebuffer;
 use maze::load_maze;
-use sounds::{play_background_music, play_victory_sound, stop_music};
+use sounds::{play_background_music, play_victory_sound, stop_music, play_screamer_sound};
 
 use once_cell::sync::Lazy;
 use std::sync::Arc;
@@ -26,6 +26,39 @@ static PARED: Lazy<Arc<Texture>> = Lazy::new(|| Arc::new(Texture::new("src\\asse
 static PUERTA: Lazy<Arc<Texture>> = Lazy::new(|| Arc::new(Texture::new("src\\assets\\images\\door.png")));
 static SCREAMER_IMAGE: Lazy<RgbaImage> = Lazy::new(|| image::open("src\\assets\\images\\screamer.png").unwrap().to_rgba8());
 
+fn draw_text(framebuffer: &mut Framebuffer, text: &str, x: usize, y: usize, color: u32) {
+    let font = vec![
+        // Define a simple 8x8 font bitmap for characters 0-9 (ASCII 48-57)
+        0x3E, 0x51, 0x49, 0x45, 0x3E, // 0
+        0x00, 0x42, 0x7F, 0x40, 0x00, // 1
+        0x42, 0x61, 0x51, 0x49, 0x46, // 2
+        0x21, 0x41, 0x45, 0x4B, 0x31, // 3
+        0x18, 0x14, 0x12, 0x7F, 0x10, // 4
+        0x27, 0x45, 0x45, 0x45, 0x39, // 5
+        0x3C, 0x4A, 0x49, 0x49, 0x30, // 6
+        0x01, 0x71, 0x09, 0x05, 0x03, // 7
+        0x36, 0x49, 0x49, 0x49, 0x36, // 8
+        0x06, 0x49, 0x49, 0x29, 0x1E, // 9
+    ];
+
+    let char_width = 5; // Ancho de cada carácter
+    let char_height = 8; // Alto de cada carácter
+
+    for (i, c) in text.chars().enumerate() {
+        if c >= '0' && c <= '9' {
+            let offset = (c as usize - '0' as usize) * char_width;
+            for row in 0..char_height {
+                for col in 0..char_width {
+                    if font[offset + col] & (1 << (char_height - 1 - row)) != 0 {
+                        framebuffer.set_current_color(color);
+                        framebuffer.point(x + col + i * (char_width + 1), y + row);
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn draw_image(framebuffer: &mut Framebuffer, image: &RgbaImage, x: usize, y: usize, scale: f32) {
     let scaled_width = (image.width() as f32 * scale) as usize;
     let scaled_height = (image.height() as f32 * scale) as usize;
@@ -34,21 +67,17 @@ fn draw_image(framebuffer: &mut Framebuffer, image: &RgbaImage, x: usize, y: usi
         let px = i % image.width() as usize;
         let py = i / image.width() as usize;
 
-        // Separar los componentes de color RGBA
         let r = pixel[0] as f32;
         let g = pixel[1] as f32;
         let b = pixel[2] as f32;
         let a = pixel[3] as f32 / 255.0;
 
-        // Si el píxel es completamente transparente, lo omitimos
         if a == 0.0 {
             continue;
         }
 
-        // Obtener el color actual del framebuffer
         let current_color = framebuffer.get_pixel_color(x + px, y + py);
 
-        // Mezclar el color actual con el color del píxel utilizando el canal alfa
         let current_r = ((current_color >> 16) & 0xFF) as f32;
         let current_g = ((current_color >> 8) & 0xFF) as f32;
         let current_b = (current_color & 0xFF) as f32;
@@ -67,7 +96,6 @@ fn draw_image(framebuffer: &mut Framebuffer, image: &RgbaImage, x: usize, y: usi
         }
     }
 }
-
 
 fn cell_to_texture_color(cell: char, tx: u32, ty: u32) -> u32 {
     let default_color = 0x000000;
@@ -184,6 +212,13 @@ fn render_minimap(framebuffer: &mut Framebuffer, player: &Player, maze: &Vec<Vec
     }
 }
 
+fn calculate_fps(last_frame_time: &mut Instant) -> u32 {
+    let duration = last_frame_time.elapsed();
+    let fps = 1.0 / duration.as_secs_f32();
+    *last_frame_time = Instant::now();
+    fps as u32
+}
+
 fn main() {
     let window_width = 1300;
     let window_height = 900;
@@ -192,6 +227,7 @@ fn main() {
     let framebuffer_height = 900;
 
     let frame_delay = Duration::from_millis(0);
+    let mut last_frame_time = Instant::now(); // Definir last_frame_time
 
     let mut framebuffer = Framebuffer::new(framebuffer_width, framebuffer_height);
 
@@ -210,6 +246,10 @@ fn main() {
     let mut selected_maze = String::new();
 
     while window.is_open() {
+        let fps = calculate_fps(&mut last_frame_time);  // Calcular FPS
+        let fps_text = format!("FPS: {}", fps);
+        let fps_x = framebuffer_width - (fps_text.len() * 8) - 10;  // Calcula la posición x para alinear el texto a la derecha
+        
         if window.is_key_down(Key::Key1) {
             selected_maze = "./mazes/maze1.txt".to_string();
             stop_music(); // Detener la música del menú
@@ -230,6 +270,8 @@ fn main() {
         framebuffer.clear();
         draw_image(&mut framebuffer, &menu_image, 0, 0, 1.0); // Mostrar imagen del menú
 
+        draw_text(&mut framebuffer, &fps_text, fps_x, 10, 0xFFFFFF);  // Mostrar FPS en la esquina superior derecha
+        
         window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();
         std::thread::sleep(frame_delay);
     }
@@ -305,6 +347,7 @@ fn main() {
         if last_screamer_time.elapsed().as_secs() >= 10 {
             screamer_triggered = true;
             last_screamer_time = Instant::now(); // Resetear el temporizador
+            play_screamer_sound(); // Reproducir sonido del screamer
         }
 
         // Dibujar el screamer si se activó
@@ -317,6 +360,9 @@ fn main() {
             }
         }
     
+        let fps = calculate_fps(&mut last_frame_time);  // Calcular FPS
+        draw_text(&mut framebuffer, &format!("FPS: {}", fps), 10, 10, 0xFFFFFF);  // Mostrar FPS en la esquina superior izquierda
+
         window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();
     
         // Verificar si el jugador alcanzó la meta (g) o está en una celda adyacente
@@ -338,7 +384,7 @@ fn main() {
     // Solo mostrar la pantalla de victoria si el jugador ha ganado
     if victory_achieved {
         stop_music(); // Detener la música del juego
-        play_victory_sound("src/assets/music/Victory_Music.mp3");
+        play_victory_sound();
 
         let victory_image = image::open("src/assets/images/victory_image.png").unwrap().to_rgba8();
 

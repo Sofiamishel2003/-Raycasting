@@ -34,13 +34,22 @@ pub fn stop_music() {
     }
 }
 
-pub fn play_victory_sound(file_path: &str) {
-    let (_stream, handle) = OutputStream::try_default().unwrap();
-    let sink = Sink::try_new(&handle).unwrap();
-    let file = BufReader::new(File::open(file_path).unwrap());
-    let source = Decoder::new(file).unwrap();
-    sink.append(source);
+pub fn play_sound_effect(file_path: &str) {
+    let file_path_clone = file_path.to_string(); // Clonar el path para evitar problemas de lifetime
     thread::spawn(move || {
+        let (_stream, handle) = OutputStream::try_default().unwrap();
+        let sink = Sink::try_new(&handle).unwrap();
+        let file = BufReader::new(File::open(file_path_clone).unwrap());
+        let source = Decoder::new(file).unwrap();
+        sink.append(source);
         sink.sleep_until_end();
     });
+}
+
+pub fn play_victory_sound() {
+    play_sound_effect("src/assets/music/Victory_Music.mp3");
+}
+
+pub fn play_screamer_sound() {
+    play_sound_effect("src/assets/music/screamer.mp3");
 }
