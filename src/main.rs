@@ -179,17 +179,17 @@ fn main() {
         if window.is_key_down(Key::Key1) {
             selected_maze = "./mazes/maze1.txt".to_string();
             stop_music(); // Detener la música del menú
-            play_background_music("src/assets/music/Club_classics.mp3");        
+            play_background_music("src/assets/music/Club_classics.mp3");
             break;
         } else if window.is_key_down(Key::Key2) {
             selected_maze = "./mazes/maze2.txt".to_string();
             stop_music(); // Detener la música del menú
-            play_background_music("src/assets/music/360.mp3");        
+            play_background_music("src/assets/music/360.mp3");
             break;
         } else if window.is_key_down(Key::Key3) {
             selected_maze = "./mazes/maze3.txt".to_string();
             stop_music(); // Detener la música del menú
-            play_background_music("src/assets/music/Girl_so_confusing.mp3");        
+            play_background_music("src/assets/music/Girl_so_confusing.mp3");
             break;
         }
 
@@ -204,6 +204,20 @@ fn main() {
 
     // Cargar laberinto seleccionado
     let maze = load_maze(&selected_maze);
+
+    // Encontrar la posición de la meta
+    let mut goal_row = 0;
+    let mut goal_col = 0;
+
+    for (row, line) in maze.iter().enumerate() {
+        for (col, &cell) in line.iter().enumerate() {
+            if cell == 'g' {
+                goal_row = row;
+                goal_col = col;
+                break;
+            }
+        }
+    }
 
     let mut player = Player {
         pos: Vec2::new(150.0, 150.0),
@@ -232,34 +246,46 @@ fn main() {
         if window.is_key_down(Key::Escape) {
             break;
         }
-
+    
         if window.is_key_down(Key::M) {
             mode = if mode == "2D" { "3D" } else { "2D" };
         }
-
+    
         process_events(&window, &mut player, &maze);
-
+    
         framebuffer.clear();
-
+    
         if mode == "2D" {
             render2d(&mut framebuffer, &player, &maze);
         } else {
-            render3d(&mut framebuffer, &player, &maze)
+            render3d(&mut framebuffer, &player, &maze);
         }
-
+    
         render_minimap(&mut framebuffer, &player, &maze, minimap_x, minimap_y, minimap_scale);
-
+    
         window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();
+    
+        // Verificar si el jugador alcanzó la meta (g) o está en una celda adyacente
+        let player_col = (player.pos.x as usize) / 100;
+        let player_row = (player.pos.y as usize) / 100;
 
-        // Verificar si el jugador alcanzó la meta (g)
-        if maze[(player.pos.y as usize) / 100][(player.pos.x as usize) / 100] == 'g' {
-          //  stop_music(); // Detener la música del juego
+        let row_diff = (goal_row as isize - player_row as isize).abs();
+        let col_diff = (goal_col as isize - player_col as isize).abs();
+    
+        println!("Player position: row {}, col {}", player_row, player_col);  // Depuración
+        println!("Maze cell at player position: {}", maze[player_row][player_col]);  // Depuración
+        println!("Goal position: row {}, col {}", goal_row, goal_col);  // Depuración
+    
+        // Si el jugador está en la meta o en una celda adyacente (diagonal incluida)
+        if row_diff <= 1 && col_diff <= 1 {
+            stop_music(); // Detener la música del juego
             play_victory_sound("src/assets/music/Victory_Music.mp3");
             break;
         }
-
+    
         std::thread::sleep(frame_delay);
     }
+    
 
     // Mostrar pantalla de felicitaciones con una imagen
     let victory_image = image::open("src/assets/images/victory_image.png").unwrap().to_rgba8();
@@ -271,10 +297,12 @@ fn main() {
         WindowOptions::default(),
     ).unwrap();
 
+    framebuffer.clear();  // Asegurarse de que el framebuffer está limpio
+    draw_image(&mut framebuffer, &victory_image, 0, 0);  // Mostrar la imagen de felicitaciones
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        framebuffer.clear();
-        draw_image(&mut framebuffer, &victory_image, 0, 0); // Mostrar la imagen de felicitaciones
         window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();
         std::thread::sleep(frame_delay);
     }
 }
+
