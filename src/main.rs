@@ -272,21 +272,16 @@ fn main() {
         let row_diff = (goal_row as isize - player_row as isize).abs();
         let col_diff = (goal_col as isize - player_col as isize).abs();
     
-        println!("Player position: row {}, col {}", player_row, player_col);  // Depuración
-        println!("Maze cell at player position: {}", maze[player_row][player_col]);  // Depuración
-        println!("Goal position: row {}, col {}", goal_row, goal_col);  // Depuración
-    
         // Si el jugador está en la meta o en una celda adyacente (diagonal incluida)
         if row_diff <= 1 && col_diff <= 1 {
-            stop_music(); // Detener la música del juego
-            play_victory_sound("src/assets/music/Victory_Music.mp3");
             break;
         }
     
         std::thread::sleep(frame_delay);
     }
     
-
+    stop_music(); // Detener la música del juego
+    play_victory_sound("src/assets/music/Victory_Music.mp3");
     // Mostrar pantalla de felicitaciones con una imagen
     let victory_image = image::open("src/assets/images/victory_image.png").unwrap().to_rgba8();
 
