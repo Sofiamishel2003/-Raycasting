@@ -7,7 +7,7 @@ use minifb::{Key, Window, WindowOptions};
 use core::{f32::consts::PI};
 use nalgebra_glm::Vec2;
 use player::{Player, process_events};
-use std::{time::Duration};
+use std::{time::{Duration, Instant}};
 use framebuffer::Framebuffer;
 use maze::load_maze;
 use sounds::{play_background_music, play_victory_sound, stop_music};
@@ -24,16 +24,50 @@ use texture::Texture;
 
 static PARED: Lazy<Arc<Texture>> = Lazy::new(|| Arc::new(Texture::new("src\\assets\\images\\green_texture.jpg")));
 static PUERTA: Lazy<Arc<Texture>> = Lazy::new(|| Arc::new(Texture::new("src\\assets\\images\\door.png")));
+static SCREAMER_IMAGE: Lazy<RgbaImage> = Lazy::new(|| image::open("src\\assets\\images\\screamer.png").unwrap().to_rgba8());
 
-fn draw_image(framebuffer: &mut Framebuffer, image: &RgbaImage, x: usize, y: usize) {
+fn draw_image(framebuffer: &mut Framebuffer, image: &RgbaImage, x: usize, y: usize, scale: f32) {
+    let scaled_width = (image.width() as f32 * scale) as usize;
+    let scaled_height = (image.height() as f32 * scale) as usize;
+
     for (i, pixel) in image.pixels().enumerate() {
         let px = i % image.width() as usize;
         let py = i / image.width() as usize;
-        let color = ((pixel[0] as u32) << 16) | ((pixel[1] as u32) << 8) | (pixel[2] as u32);
-        framebuffer.set_current_color(color);
-        framebuffer.point(x + px, y + py);
+
+        // Separar los componentes de color RGBA
+        let r = pixel[0] as f32;
+        let g = pixel[1] as f32;
+        let b = pixel[2] as f32;
+        let a = pixel[3] as f32 / 255.0;
+
+        // Si el píxel es completamente transparente, lo omitimos
+        if a == 0.0 {
+            continue;
+        }
+
+        // Obtener el color actual del framebuffer
+        let current_color = framebuffer.get_pixel_color(x + px, y + py);
+
+        // Mezclar el color actual con el color del píxel utilizando el canal alfa
+        let current_r = ((current_color >> 16) & 0xFF) as f32;
+        let current_g = ((current_color >> 8) & 0xFF) as f32;
+        let current_b = (current_color & 0xFF) as f32;
+
+        let blended_r = (r * a + current_r * (1.0 - a)) as u32;
+        let blended_g = (g * a + current_g * (1.0 - a)) as u32;
+        let blended_b = (b * a + current_b * (1.0 - a)) as u32;
+
+        let blended_color = (blended_r << 16) | (blended_g << 8) | blended_b;
+
+        for sx in 0..(scaled_width / image.width() as usize) {
+            for sy in 0..(scaled_height / image.height() as usize) {
+                framebuffer.set_current_color(blended_color);
+                framebuffer.point(x + px * (scaled_width / image.width() as usize) + sx, y + py * (scaled_height / image.height() as usize) + sy);
+            }
+        }
     }
 }
+
 
 fn cell_to_texture_color(cell: char, tx: u32, ty: u32) -> u32 {
     let default_color = 0x000000;
@@ -194,7 +228,7 @@ fn main() {
         }
 
         framebuffer.clear();
-        draw_image(&mut framebuffer, &menu_image, 0, 0); // Mostrar imagen del menú
+        draw_image(&mut framebuffer, &menu_image, 0, 0, 1.0); // Mostrar imagen del menú
 
         window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();
         std::thread::sleep(frame_delay);
@@ -236,6 +270,9 @@ fn main() {
 
     let mut mode = "3D";
     let mut victory_achieved = false;
+    let mut screamer_triggered = false;
+    let mut screamer_scale = 0.1;
+    let mut last_screamer_time = Instant::now();
 
     let minimap_scale = 0.2;
     let minimap_width = (framebuffer.width as f32 * minimap_scale) as usize;
@@ -263,6 +300,22 @@ fn main() {
         }
     
         render_minimap(&mut framebuffer, &player, &maze, minimap_x, minimap_y, minimap_scale);
+    
+        // Verificar si el screamer debe activarse cada 5 segundos
+        if last_screamer_time.elapsed().as_secs() >= 10 {
+            screamer_triggered = true;
+            last_screamer_time = Instant::now(); // Resetear el temporizador
+        }
+
+        // Dibujar el screamer si se activó
+        if screamer_triggered {
+            draw_image(&mut framebuffer, &SCREAMER_IMAGE, 300, 200, screamer_scale);
+            screamer_scale += 0.05; // Aumentar el tamaño del screamer para la animación
+            if screamer_scale >= 1.5 {
+                screamer_triggered = false; // Ocultar el screamer después de un tiempo
+                screamer_scale = 0.1; // Reiniciar el tamaño del screamer
+            }
+        }
     
         window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();
     
@@ -297,7 +350,7 @@ fn main() {
         ).unwrap();
 
         framebuffer.clear();  // Asegurarse de que el framebuffer está limpio
-        draw_image(&mut framebuffer, &victory_image, 0, 0);  // Mostrar la imagen de felicitaciones
+        draw_image(&mut framebuffer, &victory_image, 0, 0, 1.0);  // Mostrar la imagen de felicitaciones
 
         while window.is_open() && !window.is_key_down(Key::Escape) {
             window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();

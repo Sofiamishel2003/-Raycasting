@@ -16,7 +16,14 @@ impl Framebuffer {
             current_color: 0xFFFFFF,
         }
     }
-
+    pub fn get_pixel_color(&self, x: usize, y: usize) -> u32 {
+        if x < self.width && y < self.height {
+            let index = y * self.width + x;
+            self.buffer[index]
+        } else {
+            0x000000 // Retorna negro si la posición está fuera del rango
+        }
+    }
     pub fn clear(&mut self) {
         for pixel in self.buffer.iter_mut() {
             *pixel = self.background_color;
