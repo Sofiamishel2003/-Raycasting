@@ -235,6 +235,7 @@ fn main() {
     window.set_cursor_visibility(false);
 
     let mut mode = "3D";
+    let mut victory_achieved = false;
 
     let minimap_scale = 0.2;
     let minimap_width = (framebuffer.width as f32 * minimap_scale) as usize;
@@ -274,30 +275,33 @@ fn main() {
     
         // Si el jugador está en la meta o en una celda adyacente (diagonal incluida)
         if row_diff <= 1 && col_diff <= 1 {
+            victory_achieved = true;
             break;
         }
     
         std::thread::sleep(frame_delay);
     }
     
-    stop_music(); // Detener la música del juego
-    play_victory_sound("src/assets/music/Victory_Music.mp3");
-    // Mostrar pantalla de felicitaciones con una imagen
-    let victory_image = image::open("src/assets/images/victory_image.png").unwrap().to_rgba8();
+    // Solo mostrar la pantalla de victoria si el jugador ha ganado
+    if victory_achieved {
+        stop_music(); // Detener la música del juego
+        play_victory_sound("src/assets/music/Victory_Music.mp3");
 
-    let mut window = Window::new(
-        "FELICIDADES",
-        window_width,
-        window_height,
-        WindowOptions::default(),
-    ).unwrap();
+        let victory_image = image::open("src/assets/images/victory_image.png").unwrap().to_rgba8();
 
-    framebuffer.clear();  // Asegurarse de que el framebuffer está limpio
-    draw_image(&mut framebuffer, &victory_image, 0, 0);  // Mostrar la imagen de felicitaciones
+        let mut window = Window::new(
+            "FELICIDADES",
+            window_width,
+            window_height,
+            WindowOptions::default(),
+        ).unwrap();
 
-    while window.is_open() && !window.is_key_down(Key::Escape) {
-        window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();
-        std::thread::sleep(frame_delay);
+        framebuffer.clear();  // Asegurarse de que el framebuffer está limpio
+        draw_image(&mut framebuffer, &victory_image, 0, 0);  // Mostrar la imagen de felicitaciones
+
+        while window.is_open() && !window.is_key_down(Key::Escape) {
+            window.update_with_buffer(&framebuffer.buffer, framebuffer_width, framebuffer_height).unwrap();
+            std::thread::sleep(frame_delay);
+        }
     }
 }
-
